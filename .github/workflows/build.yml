@@ -1,0 +1,53 @@
+package com.example.totemcounter;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.item.Items;
+import net.minecraft.scoreboard.ScoreAccess;
+import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardCriterion;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
+import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+
+public class TotemCounterMod implements ModInitializer {
+    private static final String OBJECTIVE_NAME = "totems";
+
+    @Override
+    public void onInitialize() {
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            Scoreboard scoreboard = server.getScoreboard();
+            ScoreboardObjective objective = scoreboard.getNullableObjective(OBJECTIVE_NAME);
+
+            if (objective == null) {
+                objective = scoreboard.addObjective(
+                        OBJECTIVE_NAME,
+                        ScoreboardCriterion.DUMMY,
+                        Text.literal("Тотемов"),
+                        ScoreboardCriterion.RenderType.INTEGER,
+                        true,
+                        null
+                );
+            }
+            scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.BELOW_NAME, objective);
+        });
+
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            Scoreboard scoreboard = server.getScoreboard();
+            ScoreboardObjective objective = scoreboard.getNullableObjective(OBJECTIVE_NAME);
+
+            if (objective != null) {
+                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                    int count = player.getInventory().count(Items.TOTEM_OF_UNDYING);
+                    ScoreAccess score = scoreboard.getOrCreateScore(player, objective);
+                    
+                    if (score.getScore() != count) {
+                        score.setScore(count);
+                    }
+                }
+            }
+        });
+    }
+}
